@@ -1,0 +1,90 @@
+---
+title: "Notebook using leaflet and sf for GIS/mapping"
+format: html
+---
+
+## Load libraries
+```{r}
+#| output: false
+
+library(sf)
+library(leaflet)
+library(dplyr)
+```
+
+## Load the updated data
+```{r}
+#| output: false
+
+table_ldsf_sf <- read.csv("data/ldsf_knuckles_main_updated.csv")
+names(table_ldsf_sf)
+```
+
+## Convert dataframe to a "spatial dataframe"
+```{r}
+#| output: false
+
+table_ldsf_sf <- st_as_sf(table_ldsf_sf, coords=c("longitude","latitude"), crs=4326)
+head(table_ldsf_sf)
+```
+
+Check the class of the converted sf dataframe
+
+```{r}
+class(table_ldsf_sf)
+```
+
+
+## Let's show the LDSF plots on a leaflet map
+```{r}
+table_ldsf_sf |>
+filter(site == "kandy" & cluster == 1) |>
+leaflet() |>
+addTiles() |>
+addCircles(radius=1, color="blue",opacity=0.5, group="LDSF") |>
+addScaleBar() |>
+addMiniMap(width=50, height=50) |>
+addLayersControl(overlayGroups=c("LDSF"))
+```
+
+```{r}
+table_ldsf_sf |>
+dplyr::filter(site == "laggala" & cluster >= 14) |>
+leaflet() |>
+addProviderTiles(providers$Esri.WorldImagery) |>
+addCircles(radius=1, color="blue",opacity=0.5) |>
+addScaleBar() |>
+addMiniMap(width=50, height=50) |>
+# addLayersControl(overlayGroups="LDSF")
+addSimpleGraticule(interval=0.01)
+```
+
+## Let'a do some vector operiation
+
+We are now making a buffer of 200 meters around each LDSF plot using the *sf* package.
+```{r}
+#| output: false
+
+head(table_ldsf_sf)
+table_ldsf_buffer <- st_buffer(table_ldsf_sf, dist=200)
+
+# The point data is now converted to a polygon data
+head(table_ldsf_buffer)
+```
+
+## Let's show the buffers on a leaflet map
+```{r}
+table_ldsf_buffer |>
+leaflet() |>
+addProviderTiles(providers$Esri.WorldImagery) |>
+addPolygons(color="blue",opacity=0.5, group="LDSF Buffer") |>
+addScaleBar() |>
+addMiniMap(width=50, height=50) |>
+addLayersControl(overlayGroups="LDSF Buffer")
+```
+
+
+# Render the quarto document as html page
+
+https://r-charts.com/spatial/interactive-maps-leaflet/
+

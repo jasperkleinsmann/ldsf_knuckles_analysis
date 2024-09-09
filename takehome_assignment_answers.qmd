@@ -1,0 +1,106 @@
+---
+title: "Takehome Assignment - Knuckles Data Seminar"
+format: html
+editor: visual
+---
+
+
+
+### Load libraries
+
+```{r}
+# Load libraries
+library(dplyr)
+library(leaflet)
+library(ggplot2)
+library(sf)
+
+# If not installed yet:
+#install.packages('dplyr')
+#install.packages('leaflet')
+#install.packages('ggplot2')
+#install.packages('sf')
+```
+
+
+### Import data
+```{r}
+# Import the "ldsf_knuckles_shrubs.csv" data set
+ldsf_shrubs <- read.csv("data/ldsf_knuckles_shrubs.csv")
+```
+
+
+# The assignment:
+This document contains a number of quesitons based on the Data Analysis workshop in August 2024. You are encourgaed to use your code written during the workshop, to consult internet and to work together. 
+
+# Question 1
+Explore the data using a combinations of the functions `head()`, `names()`, `dim()`, `summary()` and `str()`
+```{r}
+#| output: false
+
+names(ldsf_shrubs)
+head(ldsf_shrubs)
+dim(ldsf_shrubs)
+summary(ldsf_shrubs)
+str(ldsf_shrubs)
+```
+
+# Question 2
+Show the dominant shrub species per site using a bar plot (`geom_col()`) and dissect by site using `facet_wrap()`. To make the plot looks nicer, only select those species that occur more than 30 times.
+
+Question: Give the dominant shrub species per site. 
+```{r}
+ldsf_shrubs |>
+    group_by(site, scientificName) |>
+    summarise(count = n()) |>
+    filter(count > 30) |>
+    ggplot()+
+    geom_col(aes(x=scientificName, y=count))+
+    facet_wrap(~site)+
+    theme_bw()+
+    coord_flip()
+```
+
+# Question 3
+Using `geom_boxplot()`, visualise the distribution of shrub height for the different vegetation structures. Use the ggplot functions `labs()`, `theme_bw()` and `theme()` to adjust the x/y labels and the layout of the graph.
+
+Question: Which vegetation structure type has the highest shrub height?
+
+```{r}
+ldsf_shrubs |>
+    ggplot()+
+    geom_boxplot(aes(x = vegstructure, y = as.numeric(shheight)))+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12), axis.text.y = element_text(size = 10))+
+    labs(y = "Shrub height", x = "Vegetation structure")
+```
+
+
+# Question 4
+Make the `ldsf_shrubs` dataframe spatial by using `st_as_sf()` function in the *sf* package. 
+```{r}
+ldsf_shrubs_spatial <- st_as_sf(ldsf_shrubs, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+
+# Question 5
+Using your spatial shrubs dataframe create in Question 4, display the plots with *Coffea arabica* in Matale on a leaflet map. Hint: use the function `filter()` before plotting the data with leaflet. 
+
+```{r}
+
+ldsf_shrubs_spatial |>
+    filter(site == "matale" & scientificName == "Coffea arabica") |>
+    leaflet() |>
+    addProviderTiles(providers$Esri.WorldImagery) |>
+    addCircles(color="blue",opacity=0.5, group="LDSF Shrubs") |>
+    addScaleBar() |>
+    addMiniMap(width=50, height=50) |>
+    addLayersControl(overlayGroups="LDSF Shrubs")
+
+```
+
+
+
+# Question 6
+Render the Quarto .qmd script as an html page. Adjust the page layout to make it look better (for instance, add documentation, headers, etc.)
+

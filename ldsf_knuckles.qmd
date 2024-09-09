@@ -1,0 +1,180 @@
+---
+title: "LDSF data analysis - Knuckles, Sri Lanka"
+author: ""
+date: today
+format: html
+---
+
+## Introduction
+
+This is a Quarto document that we will use to analyze the LDSF data for Knuckles, Sri Lanka. In Quarto documents, you can mix text, code, and results in a single document. This makes it easy to document your analysis and share it with others.
+
+Headings are written as:
+
+## Heading 2
+
+### Heading 3
+
+#### Heading 4
+
+You can also use **bold** and *italic* text.
+
+Our code will be written in R, and we will use *Quarto* to run the code and generate the results. Let's start by loading the packages (or libraries) we will need for our analysis. It's usually a good practice to load all the packages at the beginning of your document. First, we define a code chunk with the `setup` tag to load the necessary packages (note the ``` before and after the chunk). Note the **include=FALSE** argument, which means that the code chunk will not be displayed in the output document.
+
+```{r setup, include=FALSE}
+library(dplyr) ## install.packages("dplyr") if not already installed
+library(ggplot2) ## for data visualization
+library(leaflet) ## for interactive maps
+library(sf) ## for spatial data
+```
+
+## Load the data
+We have created a *data/* folder in the same directory as this document, and we have saved the LDSF data for Knuckles in this data folder. Let's load the data into our R session.
+
+```{r}
+#| output: false
+
+table_ldsf <- read.csv("data/ldsf_knuckles_main.csv")
+head(table_ldsf)
+names(table_ldsf)
+dim(table_ldsf)
+```
+
+Let's summarise our data using the dplyr library.
+
+```{r}
+#| output: false
+
+table_ldsf |>
+group_by(site, vegstructure) |>
+summarise(plots = n()) |>
+filter(site == "laggala")
+```
+
+There is a mistake in the vegetation structure class for Laggala, which we can fix like this:
+
+```{r}
+table_ldsf <- table_ldsf |>
+mutate(vegstructure = ifelse(vegstructure == "frst", "forest", vegstructure)) |>
+mutate(forest = ifelse(vegstructure == "forest", 1, 0))
+
+write.csv(table_ldsf, "data/ldsf_knuckles_main_updated.csv")
+```
+
+## Let's create a bar chart using ggplot2
+
+```{r}
+table_ldsf |>
+group_by(site, vegstructure) |>
+summarise(plots = n()) |>
+ggplot() +
+geom_col(aes(x=vegstructure, y=plots, fill=site)) +
+theme(axis.text.x = element_text(angle=45, hjust=1, size=12), axis.text.y = element_text(size=10))
+
+ggsave("figs/site_vegstructure.png")
+```
+
+```{r}
+write.csv(table_ldsf, "data/ldsf_knuckles_main_updated.csv")
+```
+
+## Load and plot tree species data
+
+```{r}
+table_ldsf_trees <- read.csv("data/ldsf_knuckles_trees.csv")
+dim(table_ldsf_trees)
+```
+
+```{r}
+table_ldsf_trees |>
+mutate(scientificName = ifelse(scientificName == "Gliricedia sepium", "Gliricidia sepium", scientificName)) |>
+group_by(site, scientificName) |>
+summarise(count = n()) |>
+filter(count > 30) |>
+ggplot() +
+geom_col(aes(x=reorder(scientificName, count), y=count), fill="seagreen") +
+coord_flip() +
+theme_bw(base_size=12) +
+facet_wrap(~site)
+```
+
+Let's display plots with Gliricidia sepium in Matale on a leaflet map:
+
+```{r}
+table_ldsf_trees |>
+mutate(scientificName = ifelse(scientificName == "Gliricedia sepium", "Gliricidia sepium", scientificName)) |>
+filter(site == "laggala" & scientificName == "Gliricidia sepium" & severeero == 1) |>
+leaflet() |>
+addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+addTiles(group = "OSM") |>
+addCircleMarkers(lng=~longitude, lat=~latitude, fillOpacity=0.2, stroke=TRUE, popup=~paste(cluster,plot,sep="_"), group="LDSF") |>
+addLayersControl(baseGroups = c("OSM","Satellite"), overlayGroups=c("LDSF"),options = layersControlOptions(collapsed=FALSE))
+```
+
+
+# Day 2: Continue with Dplyr and ggplot2
+
+Import libraries
+```{r setup2, include=FALSE}
+library(dplyr) ## install.packages("dplyr") if not already installed
+library(ggplot2) ## for data visualization
+library(ggthemes)
+library(leaflet) ## for interactive maps
+library(sf) ## for spatial data
+```
+
+Import updated data set (generated on day 1)
+```{r}
+table_ldsf <- read.csv("data/ldsf_knuckles_main_updated.csv")
+```
+
+## Plot the dominant land use across the three sites in Sri Lanka.
+```{r}
+table_ldsf  |>
+    group_by(site, dom_landuse) |>
+    summarise(number_plots = n()) |> 
+    ggplot()+
+    geom_col(aes(x = dom_landuse, y = number_plots, fill = site), color="black")+
+    scale_fill_brewer(palette = "Blues")+
+    theme_solarized()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12))+
+    labs(x = "Dominant Land Use", y = "Number of plots", title = "Our second plot")
+ggsave("figs/landuse_site.png")
+```
+
+### Using facet_wrap to show the plots for each site
+```{r}
+table_ldsf |>
+    group_by(site, cluster, dom_landuse)|>
+    summarise(number_plots = n())|>
+    group_by(site, cluster)|>
+    mutate(perc_plots = number_plots/sum(number_plots)*100)|>
+    ggplot()+
+    geom_col(aes(x = cluster, y = perc_plots, fill = dom_landuse), color="black")+
+    theme_solarized()+ # OR use theme_bw()
+    theme(legend.position = "bottom",
+            legend.text = element_text(size=12))+
+    facet_wrap(~site)
+ggsave("figs/landuse_cluster.png")
+```
+
+### Show the land use by site and whether it is cultivated or not
+```{r}
+names(table_ldsf)
+# View(table_ldsf)
+table_ldsf |>
+    group_by(site, plotcultmgd, dom_landuse)|>
+    summarise(number_plots = n())|> # Aggregates
+    mutate(plotcultmgd = ifelse(plotcultmgd == 0, "No", "Yes"))|>
+    ggplot()+
+    geom_col(aes(x = dom_landuse, y = number_plots, fill=as.factor(plotcultmgd)), color = 'grey')+
+    labs(fill="Cultivated (y/n)")+
+    theme(axis.text = element_text(size = 12), legend.position = "top", legend.text=element_text(size=12), legend.title=element_text(size=14))+
+    scale_fill_brewer(palette = "Set1")+
+    coord_flip()+ # This flips the x and y axes
+    facet_wrap(~site) # Creates graph for each unique value of site (3 in our case)
+ggsave("figs/landuse_cult_site.png")
+```
+
+
+# Render the quarto document as html page

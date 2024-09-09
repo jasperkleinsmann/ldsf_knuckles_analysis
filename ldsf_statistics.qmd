@@ -1,0 +1,95 @@
+---
+title: "Statistical analysis of LDSF data"
+format: html
+---
+
+In this exercise we will introduce the use of linear mixed models to analyze the probability of erosion in the LDSF data. Mixed models can also be used to perform several types of regression analysis, such as linear regression, logistic regression, etc.
+
+We will use the *lme4* package to fit a mixed model to the erosion data from the LDSF survey.
+
+A good introduction to mixed models:
+https://m-clark.github.io/mixed-models-with-R/
+
+Illustration of mixed models:
+https://mfviz.com/hierarchical-models/
+
+How we write models:
+model <- lm(SOC ~ Sand, data = ldsf_soil)
+
+```{r}
+#| output: false
+
+library(dplyr)
+library(lme4) #install.packages("lme4")
+library(jtools) #install.packages("jtools")
+library(ggplot2)
+```
+
+- We will be using the *lme4* package to fit a linear mixed model to the erosion data from the LDSF survey. 
+
+## Load data
+
+```{r}
+table_ldsf <- read.csv("data/ldsf_knuckles_main_updated.csv")
+names(table_ldsf)
+```
+
+- The erosion response variable is 'severeero'. This is a binary variable with 0 (no erosion) or 1 (erosion) values/outcomes. It is based on recordings of erosion patterns within each LDSF subplot, which are aggregated into a score for each plot that can be 0 for no erosion or 4 for erosion in all subplots. If this score is 3 or higher we consider the plot to have severe erosion.
+
+## Data summary
+
+- It is often useful to summarize the data before fitting a model.
+
+```{r}
+table_ldsf |>
+  group_by(site, cluster) |>
+  summarise(plots = n(), freq_eroded = (sum(severeero)/plots)*100) |>
+  ggplot() +
+  geom_violin(aes(x = site, y = freq_eroded), fill="black") +
+  geom_boxplot(aes(x = site, y = freq_eroded), width=0.1, fill="red") +
+  theme_bw(base_size=30)
+```
+
+- Just to make sure our model does what we want, let's turn the severeero column into a factor
+
+```{r}
+table_ldsf <- table_ldsf |>
+mutate(severeero = factor(severeero))
+```
+
+## Modeling the probability of erosion using lme4
+```{r}
+mod_erosion0 <- glmer(severeero ~ 1 + (1|cluster:site), data = table_ldsf, family = binomial)
+```
+
+```{r}
+summary(mod_erosion0)
+coef(mod_erosion0)
+```
+
+```{r}
+mod_erosion1 <- glmer(severeero ~ vegstructure + (1 | cluster:site), data = table_ldsf, family = binomial)
+```
+
+```{r}
+summary(mod_erosion1)
+unique(table_ldsf$vegstructure)
+coef(mod_erosion1)
+```
+
+```{r}
+jtools::summ(mod_erosion1)
+```
+
+## Visualizing the results (very simplified)
+```{r}
+table_ldsf |>
+    mutate(pErosion = predict(mod_erosion1, type = "response") * 100) |>
+    ggplot() +
+    geom_boxplot(aes(x = vegstructure, y = pErosion)) +
+    theme_bw(base_size=12) +
+    coord_flip() +
+    facet_wrap(~site)
+```
+
+# Render the quarto document as html page
