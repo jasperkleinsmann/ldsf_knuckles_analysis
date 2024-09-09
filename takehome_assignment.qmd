@@ -3,7 +3,7 @@ title: |
     ![](figs/CIFOR-ICRAF_logo.png){width=2in} 
     
     Takehome Assignment - Based on the LDSF Knuckles Data Analysis Workshop
-format: pdf
+format: html
 date: "`r Sys.Date()`"
 ---
 

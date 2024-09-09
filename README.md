@@ -1,9 +1,6 @@
----
-title: | 
-    ![](figs/CIFOR-ICRAF_logo.png){width=2in} 
-    
-    Takehome Assignment - Based on the LDSF Knuckles Data Analysis Workshop
----
+![](figs/CIFOR-ICRAF_logo.png){width=2in}
+
+# Takehome Assignment - Based on the LDSF Knuckles Data Analysis Workshop
 
 # This assignment:
 This document contains a number of quesitons based on the Data Analysis workshop in August 2024 held in Colombo, Sri Lanka. You are encourged to use your own code R produced during the workshop, to consult internet and to work together. 
